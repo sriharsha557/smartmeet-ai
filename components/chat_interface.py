@@ -2,7 +2,16 @@ import streamlit as st
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
 from models import Meeting, Participant, ParsedMeetingRequest, ParticipantMatch
-from services.nlp_service import nlp_service
+
+# Try to import NLP service, fallback to simple version
+try:
+    from services.nlp_service import nlp_service
+except ImportError:
+    try:
+        from services.nlp_service_simple import simple_nlp_service as nlp_service
+    except ImportError:
+        nlp_service = None
+
 from services.participant_service import participant_service
 
 class ChatInterface:
@@ -81,6 +90,14 @@ class ChatInterface:
         """Process user input and generate response"""
         # Add user message to history
         self._add_chat_message('user', user_input)
+        
+        # Check if NLP service is available
+        if nlp_service is None:
+            self._add_chat_message(
+                'assistant',
+                "Sorry, the NLP service is not available. Please check the installation."
+            )
+            return
         
         # Parse the input
         parsed = nlp_service.parse_meeting_request(user_input)
