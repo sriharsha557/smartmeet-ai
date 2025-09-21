@@ -15,8 +15,18 @@ try:
     from components.chat_interface import chat_interface
     from utils.mock_data import mock_data
     from models import Meeting, Participant
+    
+    # Try to import full NLP service, fallback to simple version
+    try:
+        from services.nlp_service import nlp_service
+        NLP_SERVICE_TYPE = "full"
+    except ImportError:
+        from services.nlp_service_simple import simple_nlp_service as nlp_service
+        NLP_SERVICE_TYPE = "simple"
+        
 except ImportError as e:
     st.error(f"Error importing modules: {e}")
+    st.info("Please ensure all files are in the correct directory structure.")
     st.stop()
 
 # Page configuration
