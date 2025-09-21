@@ -2,8 +2,9 @@ services:
   - type: web
     name: smartmeet-ai
     env: python
-    buildCommand: "pip install -r requirements.txt && python -c 'import nltk; nltk.download(\"punkt\"); nltk.download(\"stopwords\")'"
-    startCommand: "streamlit run main.py --server.port $PORT --server.address 0.0.0.0"
+    runtime: python-3.11.7
+    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt && python -c 'import nltk; nltk.download(\"punkt\", quiet=True); nltk.download(\"stopwords\", quiet=True)'"
+    startCommand: "streamlit run main.py --server.port $PORT --server.address 0.0.0.0 --server.headless true"
     healthCheckPath: /
     envVars:
       - key: ENVIRONMENT
@@ -12,3 +13,5 @@ services:
         value: true
       - key: STREAMLIT_BROWSER_GATHER_USAGE_STATS
         value: false
+      - key: STREAMLIT_THEME_BASE
+        value: light
