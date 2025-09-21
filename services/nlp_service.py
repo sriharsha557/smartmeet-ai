@@ -15,14 +15,24 @@ class NLPService:
     def _ensure_nltk_data(self):
         """Ensure required NLTK data is downloaded"""
         try:
+            import nltk.data
             nltk.data.find('tokenizers/punkt')
             nltk.data.find('corpora/stopwords')
-        except LookupError:
+        except (LookupError, ImportError):
             try:
+                import ssl
+                try:
+                    _create_unverified_https_context = ssl._create_unverified_context
+                except AttributeError:
+                    pass
+                else:
+                    ssl._create_default_https_context = _create_unverified_https_context
+                
                 nltk.download('punkt', quiet=True)
                 nltk.download('stopwords', quiet=True)
-            except:
-                pass  # Fallback to basic parsing if NLTK fails
+            except Exception:
+                # Complete fallback - NLTK functionality will be limited
+                print("Warning: NLTK data download failed. Using basic text processing.")
     
     def _init_patterns(self):
         """Initialize regex patterns for parsing"""
