@@ -1,4 +1,8 @@
 import streamlit as st
+
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
 from models import Meeting, Participant, ParsedMeetingRequest, ParticipantMatch
