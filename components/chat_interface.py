@@ -202,10 +202,18 @@ class ChatInterface:
     def _render_participant_matches(self, matches: List[ParticipantMatch]):
         """Render participant matches for confirmation"""
         for i, match in enumerate(matches):
+            # Check if this participant is already confirmed
+            already_confirmed = match.query in st.session_state.get('participant_confirmations', {})
+            
+            if already_confirmed:
+                confirmed_participant = st.session_state.participant_confirmations[match.query]
+                st.success(f"✅ {match.query} → {confirmed_participant.name} ({confirmed_participant.email})")
+                continue
+            
             with st.expander(f"'{match.query}' - {len(match.matches)} match(es) found", expanded=True):
                 if len(match.matches) == 0:
                     st.warning("No matches found. Would you like to add this as an external participant?")
-                    if st.button(f"Add '{match.query}' as external", key=f"add_external_{i}"):
+                    if st.button(f"Add '{match.query}' as external", key=f"add_external_{i}_{match.query}"):
                         self._add_external_participant(match.query)
                 elif len(match.matches) == 1:
                     participant = match.matches[0]
@@ -219,7 +227,7 @@ class ChatInterface:
                         if participant.title:
                             st.write(f"*{participant.title}*")
                     with col3:
-                        if st.button("✅ Confirm", key=f"confirm_{i}"):
+                        if st.button("✅ Confirm", key=f"confirm_{i}_{participant.email}_{hash(match.query)}"):
                             self._confirm_participant(match.query, participant)
                 else:
                     st.write("Multiple matches found. Please select:")
@@ -234,7 +242,7 @@ class ChatInterface:
                             if participant.title:
                                 st.write(f"*{participant.title}*")
                         with col3:
-                            if st.button("Select", key=f"select_{i}_{j}"):
+                            if st.button("Select", key=f"select_{i}_{j}_{participant.email}_{hash(match.query)}"):
                                 self._confirm_participant(match.query, participant)
     
     def _confirm_participant(self, query: str, participant: Participant):
@@ -243,6 +251,12 @@ class ChatInterface:
             st.session_state.participant_confirmations = {}
         
         st.session_state.participant_confirmations[query] = participant
+        
+        # Add confirmation message
+        self._add_chat_message(
+            'assistant',
+            f"✅ Confirmed: {participant.name} ({participant.email})"
+        )
         
         # Check if all participants are confirmed
         parsed = st.session_state.get('pending_parsed_request')
@@ -256,24 +270,27 @@ class ChatInterface:
                 self._create_meeting_draft_with_participants(confirmed_participants, parsed)
                 
                 # Clear temporary state
-                del st.session_state.pending_parsed_request
+                if 'pending_parsed_request' in st.session_state:
+                    del st.session_state.pending_parsed_request
                 st.session_state.participant_confirmations = {}
-                st.rerun()
+            
+        # Force rerun to show updates
+        st.rerun()
     
     def _add_external_participant(self, query: str):
         """Add external participant"""
         try:
             if '@' in query:
                 participant = participant_service.add_external_participant(query)
+                self._confirm_participant(query, participant)
             else:
-                # Ask for email
-                email = st.text_input(f"Enter email for {query}:", key=f"email_{query}")
-                if email:
-                    participant = participant_service.add_external_participant(email, query)
-                else:
-                    return
-            
-            self._confirm_participant(query, participant)
+                # For names without email, we need to get the email first
+                # This is a simplified approach - in a real app, you'd have a form
+                st.info(f"To add '{query}' as an external participant, please provide their email address in your next message.")
+                self._add_chat_message(
+                    'assistant',
+                    f"I need an email address to add '{query}' as an external participant. Please tell me their email."
+                )
         except ValueError as e:
             st.error(str(e))
     
