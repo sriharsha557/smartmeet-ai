@@ -83,7 +83,7 @@ class ChatInterface:
             self._render_participant_matches(data['matches'])
         elif data.get('type') == 'meeting_summary':
             self._render_meeting_summary(data['meeting'])
-        elif data.get('type') == 'confirmation_needed'):
+        elif data.get('type') == 'confirmation_needed':
             self._render_confirmation_options(data)
     
     def _process_user_input(self, user_input: str):
