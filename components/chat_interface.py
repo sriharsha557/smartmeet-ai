@@ -90,6 +90,46 @@ class ChatInterface:
         elif data.get('type') == 'confirmation_needed':
             self._render_confirmation_options(data)
     
+    def _render_meeting_summary(self, meeting: Meeting):
+        """Render meeting summary in chat"""
+        with st.container():
+            st.markdown("**📋 Meeting Summary:**")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write(f"**Title:** {meeting.title}")
+                if meeting.description:
+                    st.write(f"**Description:** {meeting.description}")
+                if meeting.start_time:
+                    st.write(f"**Date:** {meeting.start_time.strftime('%A, %B %d, %Y')}")
+                    st.write(f"**Time:** {meeting.start_time.strftime('%I:%M %p')}")
+                st.write(f"**Duration:** {meeting.duration_minutes} minutes")
+                st.write(f"**Priority:** {meeting.priority.title()}")
+            
+            with col2:
+                st.write("**Participants:**")
+                for participant in meeting.participants:
+                    st.write(f"  • {participant.name}")
+                    st.write(f"    _{participant.email}_")
+    
+    def _render_confirmation_options(self, data: Dict[str, Any]):
+        """Render confirmation options in chat"""
+        st.write("Please confirm the details above are correct.")
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            if st.button("✅ Confirm & Schedule", key="confirm_meeting"):
+                self._schedule_meeting()
+                st.rerun()
+        with col2:
+            if st.button("✏️ Edit Details", key="edit_meeting"):
+                st.session_state.editing_meeting = True
+                st.rerun()
+        with col3:
+            if st.button("❌ Cancel", key="cancel_meeting"):
+                self._cancel_draft()
+                st.rerun()
+    
     def _process_user_input(self, user_input: str):
         """Process user input and generate response"""
         # Add user message to history
