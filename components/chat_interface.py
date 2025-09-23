@@ -17,7 +17,18 @@ except ImportError:
         nlp_service = None
 
 from services.participant_service import participant_service
-
+def safe_rerun():
+    """Safe rerun that works with different Streamlit versions"""
+    try:
+        st.rerun()  # New method in Streamlit >= 1.27
+    except AttributeError:
+        try:
+            st.experimental_rerun()  # Older method
+        except AttributeError:
+            # Fallback - force refresh by setting a state variable
+            if 'refresh_counter' not in st.session_state:
+                st.session_state.refresh_counter = 0
+            st.session_state.refresh_counter += 1
 class ChatInterface:
     """Natural language chat interface for meeting scheduling"""
     
@@ -51,12 +62,12 @@ class ChatInterface:
                 if st.button("💬 Send", type="primary"):
                     if user_input.strip():
                         self._process_user_input(user_input.strip())
-                        st.rerun()
+                        safe_rerun()
             
             with col2:
                 if st.button("🗑️ Clear Chat"):
                     self._clear_chat()
-                    st.rerun()
+                    safe_rerun()
         
         # Show current meeting draft if available
         if st.session_state.current_meeting_draft:
@@ -120,15 +131,15 @@ class ChatInterface:
         with col1:
             if st.button("✅ Confirm & Schedule", key="confirm_meeting"):
                 self._schedule_meeting()
-                st.rerun()
+                safe_rerun()
         with col2:
             if st.button("✏️ Edit Details", key="edit_meeting"):
                 st.session_state.editing_meeting = True
-                st.rerun()
+                safe_rerun()
         with col3:
             if st.button("❌ Cancel", key="cancel_meeting"):
                 self._cancel_draft()
-                st.rerun()
+                safe_rerun()
     
     def _process_user_input(self, user_input: str):
         """Process user input and generate response"""
@@ -275,7 +286,7 @@ class ChatInterface:
                 st.session_state.participant_confirmations = {}
             
         # Force rerun to show updates
-        st.rerun()
+        safe_rerun()
     
     def _add_external_participant(self, query: str):
         """Add external participant"""
@@ -419,7 +430,7 @@ class ChatInterface:
         """Cancel meeting draft"""
         st.session_state.current_meeting_draft = None
         self._add_chat_message('assistant', "Meeting draft cancelled. How else can I help you?")
-        st.rerun()
+        safe_rerun()
     
     def _handle_followup_message(self, user_input: str, parsed: ParsedMeetingRequest):
         """Handle follow-up messages to modify existing draft"""
