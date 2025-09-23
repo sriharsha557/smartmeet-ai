@@ -113,97 +113,11 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Replace the CSS section in your main.py with this:
-
 st.markdown("""
-<style>
-.main-header {
-    font-size: 3rem;
-    font-weight: bold;
-    text-align: center;
-    margin-bottom: 2rem;
-    color: #667eea;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
-}
-
-/* Dark mode support */
-.stApp[data-theme="dark"] .main-header {
-    color: #a8b5ff;
-}
-
-.feature-card {
-    padding: 1rem;
-    border-radius: 10px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    margin: 1rem 0;
-}
-
-.metric-card {
-    background: var(--background-color);
-    padding: 1rem;
-    border-radius: 10px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    border-left: 4px solid #667eea;
-    text-align: center;
-    color: var(--text-color);
-}
-
-/* Dark mode support for metric cards */
-.stApp[data-theme="dark"] .metric-card {
-    background: #262730;
-    box-shadow: 0 2px 4px rgba(255,255,255,0.1);
-}
-
-.chat-container {
-    max-height: 600px;
-    overflow-y: auto;
-    padding: 1rem;
-    background: var(--secondary-background-color);
-    border-radius: 10px;
-    margin-bottom: 1rem;
-}
-
-.stChatMessage {
-    margin-bottom: 1rem;
-}
-
-/* Ensure text is visible in both themes */
-.main-content {
-    color: var(--text-color);
-}
-
-/* Fix for gradient text visibility */
-@supports (-webkit-background-clip: text) {
-    .main-header {
-        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-        -webkit-background-clip: text;
-        background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
-    
-    /* Fallback for dark mode */
-    .stApp[data-theme="dark"] .main-header {
-        background: linear-gradient(90deg, #a8b5ff 0%, #c9a9ff 100%);
-        -webkit-background-clip: text;
-        background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
-}
-
-/* Fallback if gradient text isn't supported */
-@supports not (-webkit-background-clip: text) {
-    .main-header {
-        color: #667eea !important;
-        -webkit-text-fill-color: initial;
-    }
-    
-    .stApp[data-theme="dark"] .main-header {
-        color: #a8b5ff !important;
-        -webkit-text-fill-color: initial;
-    }
-}
-</style>
+<div style="text-align: center; margin-bottom: 2rem;">
+    <h1 style="color: #1f77b4; margin-bottom: 0;">🤖 SmartMeet AI</h1>
+    <p style="color: #666; font-size: 1.2rem; margin-top: 0.5rem;">Intelligent Meeting Scheduling Assistant</p>
+</div>
 """, unsafe_allow_html=True)
 
 def main():
