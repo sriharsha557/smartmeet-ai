@@ -291,11 +291,13 @@ class ChatInterface:
             confirmed_queries = list(st.session_state.participant_confirmations.keys())
             
             if all(query in confirmed_queries for query in all_queries):
-                # All confirmed, create meeting draft
+                # All confirmed, proceed to next step
                 confirmed_participants = list(st.session_state.participant_confirmations.values())
-                self._create_meeting_draft_with_participants(confirmed_participants, parsed)
                 
-                # Clear temporary state
+                # Show availability check
+                self._show_availability_check(confirmed_participants, parsed)
+                
+                # Clear temporary participant confirmation state
                 if 'pending_parsed_request' in st.session_state:
                     del st.session_state.pending_parsed_request
                 st.session_state.participant_confirmations = {}
@@ -320,12 +322,53 @@ class ChatInterface:
         except ValueError as e:
             st.error(str(e))
     
+    def _show_availability_check(self, participants: List[Participant], parsed: ParsedMeetingRequest):
+        """Show availability check step"""
+        self._add_chat_message(
+            'assistant',
+            f"Great! Now let me check availability for {len(participants)} participants...",
+        )
+        
+        # Simulate availability check
+        from services.participant_service import participant_service
+        
+        # Get availability for the requested date/time
+        date_str = parsed.date_mentioned.isoformat() if parsed.date_mentioned else None
+        availability = participant_service.get_availability_summary(
+            participants, 
+            date_str
+        )
+        
+        # Show availability results
+        availability_message = "📅 **Availability Check Results:**\n\n"
+        conflicts = []
+        
+        for participant in participants:
+            status = availability.get(participant.email, "unknown")
+            if status == "available":
+                availability_message += f"✅ {participant.name}: Available\n"
+            elif status == "busy":
+                availability_message += f"❌ {participant.name}: Busy\n"
+                conflicts.append(participant.name)
+            else:
+                availability_message += f"❓ {participant.name}: Status unknown\n"
+        
+        if conflicts:
+            availability_message += f"\n⚠️ **Conflicts detected** with {', '.join(conflicts)}. You may want to choose a different time."
+        else:
+            availability_message += f"\n🎉 **All participants are available!**"
+        
+        self._add_chat_message('assistant', availability_message)
+        
+        # Now proceed to meeting details confirmation
+        self._create_meeting_draft_with_participants(participants, parsed)
+    
     def _create_meeting_draft_with_participants(self, participants: List[Participant], parsed: ParsedMeetingRequest):
         """Create meeting draft with confirmed participants"""
         # Create the meeting object
         meeting = Meeting()
-        meeting.title = parsed.title or "New Meeting"
-        meeting.description = parsed.description
+        meeting.title = parsed.title or self._generate_meeting_title(participants, parsed)
+        meeting.description = parsed.description or f"Meeting with {', '.join([p.name for p in participants])}"
         meeting.participants = participants
         
         # Set date and time
@@ -335,17 +378,27 @@ class ChatInterface:
                 # Parse time (simplified)
                 try:
                     if 'AM' in time_str or 'PM' in time_str:
-                        time_obj = datetime.strptime(time_str, "%I:%M %p").time()
+                        # Handle formats like "2:00 PM" or "2 PM"
+                        if ':' in time_str:
+                            time_obj = datetime.strptime(time_str, "%I:%M %p").time()
+                        else:
+                            time_obj = datetime.strptime(time_str, "%I %p").time()
                     else:
                         time_obj = datetime.strptime(time_str, "%H:%M").time()
                     
                     meeting.start_time = datetime.combine(parsed.date_mentioned, time_obj)
-                except:
+                except Exception as e:
+                    print(f"Time parsing error: {e}")
                     # Fallback to default time
                     meeting.start_time = datetime.combine(parsed.date_mentioned, datetime.min.time().replace(hour=14))
             else:
-                # Default to 2 PM
+                # Default to 2 PM if no time specified
                 meeting.start_time = datetime.combine(parsed.date_mentioned, datetime.min.time().replace(hour=14))
+        else:
+            # If no date specified, suggest tomorrow at 2 PM
+            from datetime import date, timedelta
+            tomorrow = date.today() + timedelta(days=1)
+            meeting.start_time = datetime.combine(tomorrow, datetime.min.time().replace(hour=14))
         
         # Set duration
         if parsed.duration_mentioned:
@@ -355,7 +408,7 @@ class ChatInterface:
             }
             meeting.duration_minutes = duration_map.get(parsed.duration_mentioned, 60)
         else:
-            meeting.duration_minutes = 60
+            meeting.duration_minutes = 60  # Default 1 hour
         
         if meeting.start_time:
             meeting.end_time = meeting.start_time + timedelta(minutes=meeting.duration_minutes)
@@ -363,19 +416,40 @@ class ChatInterface:
         # Set priority
         if parsed.priority_mentioned:
             meeting.priority = parsed.priority_mentioned
+        else:
+            meeting.priority = "medium"  # Default priority
         
         meeting.status = "draft"
         st.session_state.current_meeting_draft = meeting
         
-        # Add success message
+        # Show meeting summary for confirmation
         self._add_chat_message(
             'assistant',
-            f"Great! I've created a meeting draft with {len(participants)} participant(s). Please review the details below and let me know if you'd like to make any changes.",
+            "📋 **Meeting Details Summary:**\n\nPlease review the meeting details below. You can modify any details or proceed to schedule the meeting.",
             {
                 'type': 'meeting_summary',
                 'meeting': meeting
             }
         )
+        
+        # Add confirmation options
+        self._add_chat_message(
+            'assistant', 
+            "What would you like to do next?",
+            {
+                'type': 'meeting_confirmation',
+                'meeting': meeting
+            }
+        )
+    
+    def _generate_meeting_title(self, participants: List[Participant], parsed: ParsedMeetingRequest) -> str:
+        """Generate a meeting title if none provided"""
+        if len(participants) == 1:
+            return f"Meeting with {participants[0].name}"
+        elif len(participants) == 2:
+            return f"Meeting with {participants[0].name} and {participants[1].name}"
+        else:
+            return f"Team Meeting ({len(participants)} participants)"
     
     def _create_meeting_draft(self, matches: List[ParticipantMatch], parsed: ParsedMeetingRequest):
         """Create meeting draft from exact matches"""
