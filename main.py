@@ -28,7 +28,83 @@ except ImportError as e:
     st.error(f"Error importing modules: {e}")
     st.info("Please ensure all files are in the correct directory structure.")
     st.stop()
+# Compatibility fix for different Streamlit versions
+def safe_rerun():
+    """Safe rerun that works with different Streamlit versions"""
+    try:
+        st.rerun()  # New method in Streamlit >= 1.27
+    except AttributeError:
+        try:
+            st.experimental_rerun()  # Older method
+        except AttributeError:
+            # Fallback - force refresh by setting a state variable
+            if 'refresh_counter' not in st.session_state:
+                st.session_state.refresh_counter = 0
+            st.session_state.refresh_counter += 1
 
+def fix_session_state_issues():
+    """Fix common session state issues"""
+    try:
+        # Ensure required session state variables exist
+        required_vars = [
+            'app_initialized',
+            'chat_history', 
+            'current_meeting_draft',
+            'participant_confirmations'
+        ]
+        
+        for var in required_vars:
+            if var not in st.session_state:
+                if var == 'app_initialized':
+                    st.session_state[var] = False
+                elif var in ['chat_history', 'participant_confirmations']:
+                    st.session_state[var] = {}
+                else:
+                    st.session_state[var] = None
+                    
+    except Exception as e:
+        st.warning(f"Session state initialization warning: {e}")
+
+def check_dependencies():
+    """Check if all required dependencies are available"""
+    missing_deps = []
+    
+    try:
+        import pandas
+    except ImportError:
+        missing_deps.append("pandas")
+    
+    try:
+        import plotly
+    except ImportError:
+        missing_deps.append("plotly")
+    
+    try:
+        import nltk
+    except ImportError:
+        missing_deps.append("nltk")
+    
+    if missing_deps:
+        st.error(f"Missing dependencies: {', '.join(missing_deps)}")
+        st.info("Please install missing dependencies with: pip install " + " ".join(missing_deps))
+        return False
+    
+    return True
+
+def reset_application_state():
+    """Reset application to clean state"""
+    try:
+        # Clear all session state
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        
+        # Reinitialize essential state
+        fix_session_state_issues()
+        
+        st.success("Application state reset successfully!")
+        safe_rerun()
+    except Exception as e:
+        st.error(f"Error resetting application state: {e}")
 # Page configuration
 st.set_page_config(
     page_title="SmartMeet AI",
