@@ -1,7 +1,14 @@
 import streamlit as st
 
+# Initialize chat_history at module level - BEFORE any class definitions
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
+
+# Initialize other required session state variables
+if 'current_meeting_draft' not in st.session_state:
+    st.session_state.current_meeting_draft = None
+if 'participant_confirmations' not in st.session_state:
+    st.session_state.participant_confirmations = {}
 
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
@@ -17,6 +24,8 @@ except ImportError:
         nlp_service = None
 
 from services.participant_service import participant_service
+
+# Compatibility fix for different Streamlit versions
 def safe_rerun():
     """Safe rerun that works with different Streamlit versions"""
     try:
@@ -29,10 +38,12 @@ def safe_rerun():
             if 'refresh_counter' not in st.session_state:
                 st.session_state.refresh_counter = 0
             st.session_state.refresh_counter += 1
+
 class ChatInterface:
     """Natural language chat interface for meeting scheduling"""
     
     def __init__(self):
+        # Ensure session state variables are initialized
         if 'chat_history' not in st.session_state:
             st.session_state.chat_history = []
         if 'current_meeting_draft' not in st.session_state:
@@ -70,11 +81,15 @@ class ChatInterface:
                     safe_rerun()
         
         # Show current meeting draft if available
-        if st.session_state.current_meeting_draft:
+        if st.session_state.get('current_meeting_draft'):
             self._display_meeting_draft()
     
     def _display_chat_history(self):
         """Display chat history"""
+        # Double-check initialization
+        if 'chat_history' not in st.session_state:
+            st.session_state.chat_history = []
+            
         if not st.session_state.chat_history:
             st.info("👋 Hi! I'm your meeting assistant. Tell me about a meeting you'd like to schedule.")
             return
@@ -165,7 +180,7 @@ class ChatInterface:
             return
         
         # Check if this is a follow-up to an existing draft
-        if st.session_state.current_meeting_draft and self._is_followup_message(user_input):
+        if st.session_state.get('current_meeting_draft') and self._is_followup_message(user_input):
             self._handle_followup_message(user_input, parsed)
         else:
             self._handle_new_meeting_request(parsed)
@@ -439,6 +454,10 @@ class ChatInterface:
     
     def _add_chat_message(self, type: str, content: str, data: Dict[str, Any] = None):
         """Add message to chat history"""
+        # Ensure chat_history exists
+        if 'chat_history' not in st.session_state:
+            st.session_state.chat_history = []
+            
         message = {
             'type': type,
             'content': content,
