@@ -129,9 +129,7 @@ def main():
         # Load mock data on first run
         mock_data.load_from_file()
     
-    # Header
-    st.markdown('<h1 class="main-header">🤖 SmartMeet AI</h1>', unsafe_allow_html=True)
-    st.markdown('<p style="text-align: center; font-size: 1.2rem; color: #666;">Intelligent Meeting Scheduling Assistant</p>', unsafe_allow_html=True)
+
 
     # Sidebar
     with st.sidebar:
